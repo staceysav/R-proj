@@ -1,0 +1,105 @@
+---
+  title: 'Проект'
+  author: 'Анастасия Савинова'
+  output: html_document
+
+---
+
+# Шаг 1. Загрузка данных
+
+```{r}
+library(tidyverse)
+# загружаем датасеты
+imdb_raw <- read.csv("C:/Users/promobot-notebook01/Documents/imdb/IMDb_movies.csv")
+movies_raw <- read.csv("C:/Users/promobot-notebook01/Documents/imdb/movie_data_100.csv", sep = ';')
+# объединяем датасеты
+imdb_raw %>% 
+  full_join(movies_raw, by = c('imdb_title_id')) -> full_data_raw
+# сделаем вывод основной информации
+glimpse(full_data_raw)
+```
+
+# Шаг 2. Исследовательский анализ данных
+
+```{r}
+# вычисляем долю пропущенных в столбце vote_average
+mean(is.na(full_data_raw$vote_average))
+# вычисляем долю пропущенных в столбце popularity
+mean(is.na(full_data_raw$popularity))
+
+# удаляем пропушенные наблюдения по столбцу popularity
+# и создаем подвыборку с полным количеством наблюдений по столбцу popularity
+full_data_raw %>% 
+  filter(!is.na(popularity)) -> subsample_raw
+```
+
+
+
+# Шаг 3. Графический анализ данных
+
+```{r}
+
+# коробчатая диаграмма рейтинга по годам
+subsample_raw %>% 
+  filter( (year >= 1990) & (year <= 2010) ) %>% 
+  ggplot(aes(x = factor(year), y = vote_average)) +
+  geom_boxplot() +
+  labs(title = 'Рейтинг', x = 'год', y = 'рейтинг')
+
+# коробчатая диаграмма популярности по годам
+subsample_raw %>% 
+  filter( (year >= 1990) & (year <= 2010) ) %>% 
+  ggplot(aes(x = factor(year), y = popularity)) +
+  geom_boxplot() +
+  labs(title = 'Популярность', x = 'год', y = 'популярность')
+```
+
+
+# Шаг 4. Статистический анализ данных
+
+```{r}
+# создадим переменные по годам
+films_1990_2000 <- subsample_raw %>% filter((year >= 1990) & ( year < 2000))
+films_2000_2010 <- subsample_raw %>% filter( (year >= 2000) & (year <= 2010) )
+
+# непараметрический тест Шапиро
+shapiro.test(subsample_raw$vote_average)
+
+```
+
+- `vote_average`: мы отвергаем нулевую гипотезу о нормальном распределении исследуемых величин
+
+```{r}
+# применяем тест Вилкоксона на проверку нулевой гипотезы о равенстве медианных значений
+# переменная vote_average
+wilcox.test(films_1990_2000$vote_average, films_2000_2010$vote_average)
+
+```
+
+- отвергаем нулевую гипотезу о равенстве медианного значения между двумя периодами
+
+
+```{r}
+# вычисляем характеристики среднего рейтинга: 1990-2010 гг.
+subsample_raw %>% 
+  filter( ( year >= 1990) & (year <= 2010) ) %>% 
+  group_by(factor(year)) %>% 
+  summarise(
+    # вычисляем среднее значение
+    mean_vote_average = mean(vote_average),
+    # вычисляем медианное значение
+    median_vote_average = median(vote_average),
+    # вычисляем стандартнное отклонение
+    sd_vote_average = sd(vote_average),
+  ) %>% 
+  arrange(-median_vote_average) -> summary_stat_vote_average
+# сделаем вывод первых десяти наблюдений
+summary_stat_vote_average %>% head(n = 10)
+```
+
+
+
+
+
+
+
